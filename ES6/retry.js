@@ -24,9 +24,21 @@ function retry(fn, args, retryLeft = 3) {
 }
 
 function enterRetry() {
-  return retry(enter, arguments);
+  return new Promise((resolve) => {
+    retry(enter, ['name is ', 'jonathan']).then((_) => {
+      console.log('final', _);
+      resolve();
+    }, (err) => {
+      console.log('wrapped err: ', err);
+      resolve();
+    });
+  });
 }
 
-enterRetry('name is ', 'jonathan').then((_) => {
-  console.log('final', _);
-}, (err) => console.log('wrapped err: ', err));
+async function exec() {
+  for (let i = 0; i < 10; i++) {
+    await enterRetry();
+  }
+}
+
+exec();

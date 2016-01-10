@@ -12,9 +12,9 @@ function handle1() {
 }
 
 function handle2() {
-  console.log('handle2 enter');
   return new Promise((resolve) => {
     setTimeout(() => {
+      console.log('handle2 enter');
       resolve();
     }, 5000);
   });

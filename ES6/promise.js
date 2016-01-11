@@ -90,6 +90,7 @@ let chainResolve = function() {
   };
 
   let final = function() {
+    //noinspection JSValidateTypes
     return 'final done'; // 看看这个的打印结果,其实和上面是一样的,理由下面会说到
   };
 
@@ -138,12 +139,88 @@ let chainResolve = function() {
 };
 
 // ------------------------------------------------------------------------------------------------------------------------
+// 并行的Promise执行
+let parallelResolve = function() {
+  console.log('-----------------------------');
+  /**
+   * Promise.all : 所有执行中的promise,所有都完成或其中任何一个被拒绝,则完成
+   * Promise.race : 所有执行中的promise,只要一个状态变化,就结束(无论是否是完成还是拒绝)
+   * Promise.settle : 所有执行中的promise,所有的状态都变化,即便有拒绝,也会等到所有的都执行完成状态变化
+   */
+  let step1 = function() {
+    return Promise.resolve('step1 done');
+  };
+  let step2 = function() {
+    return Promise.resolve('step2 done');
+  };
+  let step3 = function() {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve('step3 done');
+      }, 500);
+    });
+  };
+  let step4 = function() {
+    return Promise.resolve('step4 done');
+  };
+  let err1 = function() {
+    throw new Error('Some err in func err1');
+  };
+  let err2 = function() {
+    return Promise.reject(new Error('Some err in func err2'));
+  };
+  let err3 = function() {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        reject(new Error('Some err in func err3'));
+      }, 1500);
+    });
+  };
+
+  Promise.all([step1(), step2(), step3(), step4()]).then((_) => {
+    // 可以看到加了延时的step3的返回位置还是在第三位,说明返回的时候是按"槽位"来的,而不是执行完成顺序,它们是同时开始,等最后一个执行结束统一返回的
+    let [sr1, sr2, sr3, sr4] = _; // 稍微尝试下这种写法,都是合法的
+    console.log('all1 finished: ', _, sr1, sr2, sr3, sr4);
+  }).catch((_) => {
+    console.log('catch1: ' + _);
+  });
+
+  Promise.all([step1(), step2(), step4(), err3()]).then((_) => {
+    console.log('all2 finished: ', _);
+  }).catch((_) => {
+    // 执行函数step1 2 4都是同步的,且出错的err3是异步的,但是正确的结果仍旧没有得到返回,可以印证all的执行理念: 要么全对,要么就全错,即便出错的是最后一个亦如此
+    console.log('catch2: ' + _);
+  });
+
+  Promise.all([step1(), step2(), err2(), step3(), step4()]).then((_) => {
+    console.log('all3 finished: ', _);
+  }).catch((_) => {
+    // 错误被打印出来,完成的则不会
+    console.log('catch3: ' + _);
+  });
+
+  Promise.all([step1(), step2(), err1(), step3(), step4()]).then((_) => {
+    console.log('all4 finished: ', _);
+  }).catch((_) => {
+    /**
+     * 这个Promise.all的catch4不会被打印出来,因为err1是直接抛出错误,而不是改变Promise的状态到拒绝
+     * Promise.all的执行会即刻终止,因为某一个并行的Promise内部中断了,但是onResolve和onReject或catch事件都不会得到返回
+     * 因此这种抛错方法一定要避免,如果是使用别人的代码的话,需要使用try catch,包裹不确定的代码块,然后使用自己catch到的错误进行手动的reject
+     * 这部分的逻辑和直接使用Promise不同,因此一定要小心
+     */
+    console.log('catch4: ' + _);
+  });
+
+};
+
+// ------------------------------------------------------------------------------------------------------------------------
 // 执行器
 let exec = async function() {
   await execStaticResolve();
   await errResolve();
   await asyncResolve();
   await chainResolve();
+  await parallelResolve();
 };
 
 exec();

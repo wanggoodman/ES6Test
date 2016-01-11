@@ -46,10 +46,10 @@ let errResolve = function() {
   }).catch((_) => {
     console.log("errorUncaught catch: " + _);
   });
-  errorUncaught().then((_) => { // 使用onReject捕获错误
+  errorUncaught().then((_) => { // 使用onRejected捕获错误
     console.log(_);
   }, (_) => {
-    console.log("errorUncaught onReject: " + _);
+    console.log("errorUncaught onRejected: " + _);
   });
   errorCaught().then((_) => { // 使用promise内部自己的try catch,然后reject
     console.log(_);
@@ -173,7 +173,7 @@ let parallelResolve = function() {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         reject(new Error('Some err in func err3'));
-      }, 1500);
+      }, 1000);
     });
   };
 
@@ -199,18 +199,57 @@ let parallelResolve = function() {
     console.log('catch3: ' + _);
   });
 
-  Promise.all([step1(), step2(), err1(), step3(), step4()]).then((_) => {
-    console.log('all4 finished: ', _);
-  }).catch((_) => {
-    /**
-     * 这个Promise.all的catch4不会被打印出来,因为err1是直接抛出错误,而不是改变Promise的状态到拒绝
-     * Promise.all的执行会即刻终止,因为某一个并行的Promise内部中断了,但是onResolve和onReject或catch事件都不会得到返回
-     * 因此这种抛错方法一定要避免,如果是使用别人的代码的话,需要使用try catch,包裹不确定的代码块,然后使用自己catch到的错误进行手动的reject
-     * 这部分的逻辑和直接使用Promise不同,因此一定要小心
-     */
-    console.log('catch4: ' + _);
-  });
+  //Promise.all([step1(), step2(), err1(), step3(), step4()]).then((_) => {
+  //  console.log('all4 finished: ', _);
+  //}).catch((_) => {
+  //  /**
+  //   * 这个Promise.all的catch4不会被打印出来,因为err1是直接抛出错误,而不是改变Promise的状态到拒绝
+  //   * Promise.all的执行会即刻终止,因为某一个并行的Promise内部中断了,但是onFulfilled和onRejected或catch事件都不会得到返回
+  //   * 因此这种抛错方法一定要避免,如果是使用别人的代码的话,需要使用try catch,包裹不确定的代码块,然后使用自己catch到的错误进行手动的reject
+  //   * 这部分的逻辑和直接使用Promise不同,因此一定要小心
+  //   *
+  //   * NOTE: 要尝试这部分代码的时候请注释掉其他的代码执行,单独执行该代码块,否则由于内部未捕获的错误,进程会静默退出,其他的代码执行会受到影响
+  //   */
+  //  console.log('catch4: ' + _);
+  //});
 
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, 1500);
+  });
+};
+
+// ------------------------------------------------------------------------------------------------------------------------
+// 并行的Promise执行
+let errorHanlding = function() {
+  console.log('-----------------------------');
+  function throwError(value) {
+    // 抛出异常
+    throw new Error(value);
+  }
+  // <1> onRejected不会被调用
+  function badMain(onRejected) {
+    // 和onFulfilled同一级的onRejected是无法捕获onFulfilled业务中发生的错误的,必须到其下一级才可以,或者索性编写.catch来捕获
+    //noinspection JSValidateTypes
+    return Promise.resolve(42).then(throwError, onRejected);
+  }
+  // <2> 有异常发生时onRejected会被调用
+  function goodMain(onRejected) {
+    return Promise.resolve(42).then(throwError).catch(onRejected);
+  }
+  // 运行示例
+  return new Promise((resolve) => {
+    badMain(function() {
+      console.log("BAD");
+    });
+    goodMain(function() {
+      console.log("GOOD");
+    });
+    setTimeout(() => {
+      resolve();
+    }, 1000);
+  });
 };
 
 // ------------------------------------------------------------------------------------------------------------------------
@@ -221,6 +260,7 @@ let exec = async function() {
   await asyncResolve();
   await chainResolve();
   await parallelResolve();
+  await errorHanlding();
 };
 
 exec();

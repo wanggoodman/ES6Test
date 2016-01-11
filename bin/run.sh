@@ -12,4 +12,4 @@ cd ${BASE_PATH}
 
 gulp
 
-node ES5/{$1}
+node ES5/promise.js

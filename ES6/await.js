@@ -5,6 +5,8 @@ async function enter() {
   await handle2();
   //handle2();
   handle3();
+
+  return 'enter finished!';
 }
 
 function handle1() {
@@ -24,4 +26,8 @@ function handle3() {
   console.log('handle3 enter');
 }
 
-enter();
+enter().then((_) => {
+  console.log('async/await always return a promise, even it has no promise statement in it: ', _);
+}).catch((e) => {
+  console.log('error? ', e);
+});

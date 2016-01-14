@@ -7,7 +7,7 @@ function staticResolve() {
 }
 
 let execStaticResolve = function() {
-  console.log('-----------------------------');
+  console.log('###staticResolve###-----------------------------');
   staticResolve().then((_) => {
     console.log(_);
   }).catch((_) => {
@@ -18,7 +18,7 @@ let execStaticResolve = function() {
 // ------------------------------------------------------------------------------------------------------------------------
 // 错误捕获范例
 let errResolve = function() {
-  console.log('-----------------------------');
+  console.log('###errResolve###-----------------------------');
   let err = function() {
     throw new Error('Some err in func err');
   };
@@ -64,9 +64,40 @@ let errResolve = function() {
 };
 
 // ------------------------------------------------------------------------------------------------------------------------
+// 跨层级的函数错误捕获问题
+let errAcross = function() {
+  console.log('###errAcross###-----------------------------');
+  let err = function() {
+    throw new Error('Error in func "err"');
+  };
+  let errL1 = function() {
+    return new Promise((resolve) => {
+      resolve(err());
+    });
+  };
+  let errL2 = function() {
+    return new Promise((resolve) => {
+      resolve(errL1());
+    });
+  };
+
+  errL2().then(() => {
+    console.log('errAcross executed!');
+  }).catch((err) => {
+    console.log('Error caught in main: ', err);
+  });
+
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, 1000);
+  });
+};
+
+// ------------------------------------------------------------------------------------------------------------------------
 // 异步调用范例,即便立刻resolve,仍旧还是异步调用,还是要走异步堆栈
 let asyncResolve = function() {
-  console.log('-----------------------------');
+  console.log('###asyncResolve###-----------------------------');
   let promise = new Promise(function (resolve){
     console.log("inner promise"); // 第一个打印
     resolve(42);
@@ -80,7 +111,7 @@ let asyncResolve = function() {
 // ------------------------------------------------------------------------------------------------------------------------
 // 链式调用,及其中的错误处理
 let chainResolve = function() {
-  console.log('-----------------------------');
+  console.log('###chainResolve###-----------------------------');
   let err = function() {
     throw new Error('Some err in func err');
   };
@@ -141,7 +172,7 @@ let chainResolve = function() {
 // ------------------------------------------------------------------------------------------------------------------------
 // 并行的Promise执行
 let parallelResolve = function() {
-  console.log('-----------------------------');
+  console.log('###parallelResolve###-----------------------------');
   /**
    * Promise.all : 所有执行中的promise,所有都完成或其中任何一个被拒绝,则完成
    * Promise.race : 所有执行中的promise,只要一个状态变化,就结束(无论是否是完成还是拒绝)
@@ -223,7 +254,7 @@ let parallelResolve = function() {
 // ------------------------------------------------------------------------------------------------------------------------
 // 并行的Promise执行
 let errorHanlding = function() {
-  console.log('-----------------------------');
+  console.log('###errorHanlding###-----------------------------');
   function throwError(value) {
     // 抛出异常
     throw new Error(value);
@@ -257,6 +288,7 @@ let errorHanlding = function() {
 let exec = async function() {
   await execStaticResolve();
   await errResolve();
+  await errAcross();
   await asyncResolve();
   await chainResolve();
   await parallelResolve();

@@ -81,8 +81,28 @@ let errAcross = function() {
     });
   };
 
+  let reject = function() {
+    return Promise.reject(new Error('Error in func "reject"'));
+  };
+  let rejectL1 = function() {
+    return new Promise((resolve) => {
+      resolve(reject());
+    });
+  };
+  let rejectL2 = function() {
+    return new Promise((resolve) => {
+      resolve(rejectL1());
+    });
+  };
+
   errL2().then(() => {
-    console.log('errAcross executed!');
+    console.log('errAcross err executed!');
+  }).catch((err) => {
+    console.log('Error caught in main: ', err);
+  });
+
+  rejectL2().then(() => {
+    console.log('errAcross reject executed!');
   }).catch((err) => {
     console.log('Error caught in main: ', err);
   });
